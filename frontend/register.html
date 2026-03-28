@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniRide — Create Account</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .card h2 { font-family: var(--font-head); font-size: 1.5rem; font-weight: 800; margin-bottom: 0.3rem; }
+  .card .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 1.8rem; font-weight: 300; }
+  .role-tabs { display: flex; gap: 0; margin-bottom: 1.8rem; background: var(--surface); border-radius: 12px; padding: 4px; border: 1px solid var(--border); }
+  .tab-btn { flex: 1; padding: 0.65rem; border: none; background: transparent; color: var(--muted); font-family: var(--font-head); font-weight: 700; font-size: 0.88rem; cursor: pointer; border-radius: 9px; transition: all 0.2s; }
+  .tab-btn.active { background: var(--accent); color: #0a0a0f; }
+  .rider-only { display: none; }
+  .rider-only.show { display: block; }
+  .step-indicator { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; }
+  .step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; font-family: var(--font-head); border: 1px solid var(--border); color: var(--muted); transition: all 0.3s; }
+  .step-dot.active { background: var(--accent); color: #0a0a0f; border-color: var(--accent); }
+  .step-dot.done { background: var(--green); color: #0a0a0f; border-color: var(--green); }
+  .step-line { flex: 1; height: 1px; background: var(--border); }
+  .step-page { display: none; }
+  .step-page.active { display: block; }
+  .login-prompt { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 1.2rem; }
+  .login-prompt a { color: var(--accent); font-weight: 600; }
+  .password-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+  .terms-check { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; cursor: pointer; }
+  .terms-check input { margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Uni<span>Ride</span></a>
+  <div class="nav-links"><a href="login.html">Sign in</a></div>
+</nav>
+<div class="page-wrapper">
+  <div class="page-center fade-in">
+    <div class="card">
+      <h2>Create your account</h2>
+      <p class="sub">FAUM students only — you will need your school email and student ID.</p>
+      <div class="role-tabs">
+        <button class="tab-btn active" onclick="setRole('passenger')">I need rides</button>
+        <button class="tab-btn" onclick="setRole('rider')">I can drive</button>
+      </div>
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot-1">1</div>
+        <div class="step-line"></div>
+        <div class="step-dot" id="dot-2">2</div>
+      </div>
+      <div id="error-msg" class="alert alert-error" style="display:none;"></div>
+
+      <!-- Step 1 -->
+      <div class="step-page active" id="step-1">
+        <div class="form-row">
+          <div class="form-group"><label>First Name</label><input type="text" id="fname" placeholder="John" /></div>
+          <div class="form-group"><label>Last Name</label><input type="text" id="lname" placeholder="Doe" /></div>
+        </div>
+        <div class="form-group"><label>School Email</label><input type="email" id="email" placeholder="you@faum.edu.ng" /></div>
+        <div class="form-group"><label>Phone / WhatsApp</label><input type="tel" id="phone" placeholder="+234 800 000 0000" /></div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Minimum 6 characters" />
+          <p class="password-hint">Use at least 6 characters.</p>
+        </div>
+        <button class="btn btn-primary" onclick="nextStep(1)">Continue</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-page" id="step-2">
+        <div class="form-group"><label>Student ID / Matric Number</label><input type="text" id="matric" placeholder="e.g. FAUM/CMP/2022/001" /></div>
+        <div class="form-group"><label>Department</label><input type="text" id="department" placeholder="e.g. Mathematics and Computer Science" /></div>
+        <div class="form-group">
+          <label>Level</label>
+          <select id="level">
+            <option value="">Select your level</option>
+            <option>100 Level</option><option>200 Level</option>
+            <option>300 Level</option><option>400 Level</option><option>500 Level</option>
+          </select>
+        </div>
+        <div class="rider-only" id="rider-fields">
+          <div class="form-group">
+            <label>Vehicle Type</label>
+            <select id="vehicle-type">
+              <option value="">Select vehicle</option>
+              <option>Sedan</option><option>SUV / Jeep</option>
+              <option>Motorcycle</option><option>Mini-bus</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Plate Number</label><input type="text" id="plate" placeholder="e.g. MKD-123-XY" /></div>
+            <div class="form-group">
+              <label>Available Seats</label>
+              <select id="seats"><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label>Base Fare (NGN per trip)</label><input type="number" id="rate" placeholder="e.g. 300" /></div>
+        </div>
+        <label class="terms-check">
+          <input type="checkbox" id="terms" />
+          I agree to the UniRide community guidelines and confirm I am a registered FAUM student.
+        </label>
+        <div style="display:flex; gap:0.8rem;">
+          <button class="btn btn-secondary" onclick="goToStep(1)" style="width:auto; padding:0.85rem 1.5rem;">Back</button>
+          <button class="btn btn-primary" onclick="submitRegistration()" id="submit-btn">Create Account</button>
+        </div>
+      </div>
+
+      <p class="login-prompt">Already have an account? <a href="login.html">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let currentRole = 'passenger';
+
+  function setRole(role) {
+    currentRole = role;
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', (role === 'rider' && i === 1) || (role === 'passenger' && i === 0));
+    });
+    document.getElementById('rider-fields').classList.toggle('show', role === 'rider');
+  }
+  window.setRole = setRole;
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function goToStep(step) {
+    document.querySelectorAll('.step-page').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + step).classList.add('active');
+    for (let i = 1; i <= 2; i++) {
+      const dot = document.getElementById('dot-' + i);
+      dot.classList.remove('active', 'done');
+      if (i < step) dot.classList.add('done');
+      else if (i === step) dot.classList.add('active');
+    }
+    document.getElementById('error-msg').style.display = 'none';
+  }
+  window.goToStep = goToStep;
+
+  function nextStep(from) {
+    if (from === 1) {
+      const fname = document.getElementById('fname').value.trim();
+      const lname = document.getElementById('lname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const password = document.getElementById('password').value;
+      if (!fname || !lname || !email || !phone || !password) { showError('Please fill in all fields.'); return; }
+      if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+      goToStep(2);
+    }
+  }
+  window.nextStep = nextStep;
+
+  async function submitRegistration() {
+    const matric = document.getElementById('matric').value.trim();
+    const dept = document.getElementById('department').value.trim();
+    const level = document.getElementById('level').value;
+    const terms = document.getElementById('terms').checked;
+
+    if (!matric || !dept || !level) { showError('Please fill in all fields.'); return; }
+    if (!terms) { showError('You must agree to the community guidelines.'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.innerHTML = '<span class="spinner"></span> Creating account...';
+    btn.disabled = true;
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      const userData = {
+        first_name: document.getElementById('fname').value.trim(),
+        last_name: document.getElementById('lname').value.trim(),
+        email: email,
+        phone: document.getElementById('phone').value.trim(),
+        matric_no: matric,
+        department: dept,
+        level: level,
+        role: currentRole,
+        verified: false,
+        created_at: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'users', uid), userData);
+
+      if (currentRole === 'rider') {
+        await addDoc(collection(db, 'riders'), {
+          user_id: uid,
+          vehicle_type: document.getElementById('vehicle-type').value,
+          plate_no: document.getElementById('plate').value.trim(),
+          seats: document.getElementById('seats').value,
+          rate: document.getElementById('rate').value,
+          is_online: false,
+          latitude: null,
+          longitude: null
+        });
+      }
+
+      localStorage.setItem('user', JSON.stringify({ id: uid, ...userData }));
+      localStorage.setItem('token', await userCredential.user.getIdToken());
+      window.location.href = 'dashboard.html';
+
+    } catch (err) {
+      const messages = {
+        'auth/email-already-in-use': 'An account with this email already exists.',
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/weak-password': 'Password must be at least 6 characters.'
+      };
+      showError(messages[err.code] || err.message);
+      btn.innerHTML = 'Create Account';
+      btn.disabled = false;
+    }
+  }
+  window.submitRegistration = submitRegistration;
+</script>
+</body>
+</html>

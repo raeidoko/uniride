@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniRide — Verify ID</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding-top: 70px; }
+  .page { max-width: 520px; margin: 0 auto; padding: 2.5rem 5%; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-family: var(--font-head); font-size: 2rem; font-weight: 800; margin-bottom: 0.3rem; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; font-weight: 300; }
+  .upload-area {
+    background: var(--card); border: 2px dashed var(--border); border-radius: 20px;
+    padding: 3rem 2rem; text-align: center; cursor: pointer;
+    transition: border-color 0.3s; margin-bottom: 1.5rem; position: relative;
+  }
+  .upload-area:hover { border-color: var(--accent); }
+  .upload-area.has-file { border-style: solid; border-color: rgba(245,200,66,0.4); }
+  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 1rem; color: var(--muted); }
+  .upload-area h3 { font-family: var(--font-head); font-weight: 700; margin-bottom: 0.4rem; }
+  .upload-area p { color: var(--muted); font-size: 0.85rem; font-weight: 300; }
+  .preview-img { max-width: 100%; border-radius: 12px; margin-top: 1rem; display: none; }
+  .ocr-result-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.3rem 1.5rem; margin-bottom: 1.5rem; display: none;
+  }
+  .ocr-result-card h4 { font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ocr-field { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  .ocr-field:last-child { border-bottom: none; }
+  .ocr-field .f-label { color: var(--muted); }
+  .ocr-field .f-value { font-weight: 600; color: var(--accent); }
+  .steps-info { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; }
+  .steps-info h4 { font-family: var(--font-head); font-weight: 700; font-size: 0.85rem; margin-bottom: 0.8rem; }
+  .step-row { display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 0.6rem; font-size: 0.82rem; color: var(--muted); }
+  .step-row:last-child { margin-bottom: 0; }
+  .step-num-sm { background: var(--card); border: 1px solid var(--border); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; font-family: var(--font-head); flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Uni<span>Ride</span></a>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+  </div>
+</nav>
+<div class="page fade-in">
+  <div class="page-header">
+    <div class="section-label">Identity verification</div>
+    <h1>Verify your school ID</h1>
+    <p>Upload a clear photo of your FAUM student ID card. Our system reads it automatically.</p>
+  </div>
+
+  <div class="steps-info">
+    <h4>What to expect</h4>
+    <div class="step-row"><div class="step-num-sm">1</div> Upload a photo of your school ID card — front side only.</div>
+    <div class="step-row"><div class="step-num-sm">2</div> The system reads your name and matric number from the image.</div>
+    <div class="step-row"><div class="step-num-sm">3</div> If it matches your account details, you are verified instantly.</div>
+  </div>
+
+  <div id="error-msg" class="alert alert-error" style="display:none;"></div>
+  <div id="success-msg" class="alert alert-success" style="display:none;"></div>
+
+  <div class="upload-area" id="upload-area">
+    <input type="file" id="id-file" accept="image/*" onchange="handleFile(event)" />
+    <div class="upload-icon" id="upload-icon">[ ID ]</div>
+    <h3 id="upload-title">Upload your school ID</h3>
+    <p id="upload-sub">Click to select or drag and drop a photo here. JPG, PNG accepted.</p>
+    <img class="preview-img" id="preview-img" />
+  </div>
+
+  <div class="ocr-result-card" id="ocr-result-card">
+    <h4>Detected from ID card</h4>
+    <div class="ocr-field"><span class="f-label">Full name</span><span class="f-value" id="ocr-name">—</span></div>
+    <div class="ocr-field"><span class="f-label">Matric number</span><span class="f-value" id="ocr-matric">—</span></div>
+    <div class="ocr-field"><span class="f-label">Department</span><span class="f-value" id="ocr-dept">—</span></div>
+  </div>
+
+  <button class="btn btn-primary" id="verify-btn" onclick="submitVerification()" style="display:none;">
+    Confirm and verify
+  </button>
+  <button class="btn btn-ghost" onclick="window.location.href='dashboard.html'" style="margin-top:0.5rem; font-size:0.82rem;">
+    Go back to dashboard
+  </button>
+</div>
+<script>
+  let selectedFile = null;
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = document.getElementById('preview-img');
+      img.src = ev.target.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    document.getElementById('upload-area').classList.add('has-file');
+    document.getElementById('upload-title').textContent = file.name;
+    document.getElementById('upload-sub').textContent = 'File selected. Click "Confirm and verify" to proceed.';
+    document.getElementById('upload-icon').textContent = '[OK]';
+    document.getElementById('verify-btn').style.display = 'block';
+    runOCR(file);
+  }
+
+  async function runOCR(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const res = await fetch('http://localhost:5000/verify-id', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('ocr-name').textContent = data.name || 'Not detected';
+        document.getElementById('ocr-matric').textContent = data.matric_no || 'Not detected';
+        document.getElementById('ocr-dept').textContent = data.department || 'Not detected';
+        document.getElementById('ocr-result-card').style.display = 'block';
+      }
+    } catch (err) {
+      document.getElementById('ocr-result-card').style.display = 'none';
+    }
+  }
+
+  async function submitVerification() {
+    if (!selectedFile) return;
+    const btn = document.getElementById('verify-btn');
+    btn.innerHTML = '<span class="spinner"></span> Verifying...';
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    try {
+      const res = await fetch('http://localhost:5000/verify-id/confirm', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('success-msg').textContent = 'Identity verified. Your account is now fully active.';
+        document.getElementById('success-msg').style.display = 'block';
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        user.verified = true;
+        localStorage.setItem('user', JSON.stringify(user));
+        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+      } else {
+        document.getElementById('error-msg').textContent = data.message || 'Verification failed. Make sure the ID photo is clear and try again.';
+        document.getElementById('error-msg').style.display = 'block';
+        btn.innerHTML = 'Confirm and verify';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      document.getElementById('error-msg').textContent = 'Could not connect to server. Please try again.';
+      document.getElementById('error-msg').style.display = 'block';
+      btn.innerHTML = 'Confirm and verify';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

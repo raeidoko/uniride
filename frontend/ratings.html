@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniRide — Rate Your Ride</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding-top: 70px; }
+  .page { max-width: 520px; margin: 0 auto; padding: 2.5rem 5%; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-family: var(--font-head); font-size: 2rem; font-weight: 800; margin-bottom: 0.3rem; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; font-weight: 300; }
+  .trip-summary { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.3rem 1.5rem; margin-bottom: 1.5rem; }
+  .trip-summary h4 { font-family: var(--font-head); font-weight: 700; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+  .ts-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
+  .ts-row:last-child { border-bottom: none; }
+  .ts-label { color: var(--muted); }
+  .ts-value { font-weight: 500; }
+  .star-row { display: flex; justify-content: center; gap: 0.8rem; margin: 1.5rem 0; }
+  .star { font-size: 2.5rem; cursor: pointer; color: var(--border); transition: color 0.15s, transform 0.15s; }
+  .star:hover, .star.active { color: var(--accent); transform: scale(1.1); }
+  .rating-label { text-align: center; font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--muted); margin-bottom: 1.5rem; min-height: 1.4rem; }
+  .form-group textarea { height: 100px; resize: none; }
+  .rating-history { margin-top: 2.5rem; }
+  .rating-history h3 { font-family: var(--font-head); font-weight: 700; font-size: 1rem; margin-bottom: 1rem; }
+  .rating-item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.3rem; margin-bottom: 0.8rem; }
+  .ri-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+  .ri-name { font-weight: 600; font-size: 0.9rem; }
+  .ri-score { font-family: var(--font-head); font-weight: 800; color: var(--accent); }
+  .ri-comment { font-size: 0.82rem; color: var(--muted); font-weight: 300; }
+  .ri-date { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+  .empty-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Uni<span>Ride</span></a>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+  </div>
+</nav>
+<div class="page fade-in">
+  <div class="page-header">
+    <div class="section-label">Ratings</div>
+    <h1>Rate your ride</h1>
+    <p>Your feedback helps keep the UniRide community safe and trustworthy.</p>
+  </div>
+
+  <div id="error-msg" class="alert alert-error" style="display:none;"></div>
+  <div id="success-msg" class="alert alert-success" style="display:none;"></div>
+
+  <div class="card" id="rating-form">
+    <div class="trip-summary">
+      <h4>Trip details</h4>
+      <div class="ts-row"><span class="ts-label">Driver</span><span class="ts-value" id="driver-name">—</span></div>
+      <div class="ts-row"><span class="ts-label">Destination</span><span class="ts-value" id="trip-dest">—</span></div>
+      <div class="ts-row"><span class="ts-label">Fare paid</span><span class="ts-value" id="trip-fare">—</span></div>
+    </div>
+
+    <p style="text-align:center; color:var(--muted); font-size:0.85rem; margin-bottom:0.5rem;">How was your experience?</p>
+
+    <div class="star-row" id="star-row">
+      <span class="star" onclick="setRating(1)" data-val="1">&#9733;</span>
+      <span class="star" onclick="setRating(2)" data-val="2">&#9733;</span>
+      <span class="star" onclick="setRating(3)" data-val="3">&#9733;</span>
+      <span class="star" onclick="setRating(4)" data-val="4">&#9733;</span>
+      <span class="star" onclick="setRating(5)" data-val="5">&#9733;</span>
+    </div>
+    <div class="rating-label" id="rating-label">Tap a star to rate</div>
+
+    <div class="form-group">
+      <label>Comment (optional)</label>
+      <textarea id="comment" placeholder="Describe your experience..."></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="submitRating()" id="submit-btn">Submit rating</button>
+    <button class="btn btn-ghost" onclick="window.location.href='dashboard.html'" style="margin-top:0.5rem; font-size:0.82rem;">
+      Skip for now
+    </button>
+  </div>
+
+  <div class="rating-history">
+    <h3>Your past ratings</h3>
+    <div id="rating-list">
+      <div class="empty-state">No ratings yet.</div>
+    </div>
+  </div>
+</div>
+<script>
+  let selectedRating = 0;
+  const labels = ['', 'Poor', 'Below average', 'Average', 'Good', 'Excellent'];
+
+  const params = new URLSearchParams(window.location.search);
+  const bookingId = params.get('booking_id');
+
+  if (bookingId) {
+    loadBooking(bookingId);
+  } else {
+    document.getElementById('rating-form').style.display = 'none';
+  }
+
+  loadHistory();
+
+  function setRating(val) {
+    selectedRating = val;
+    document.querySelectorAll('.star').forEach(s => {
+      s.classList.toggle('active', parseInt(s.dataset.val) <= val);
+    });
+    document.getElementById('rating-label').textContent = labels[val];
+  }
+
+  async function loadBooking(id) {
+    try {
+      const res = await fetch('http://localhost:5000/bookings/' + id, {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('driver-name').textContent = data.driver_name || '—';
+        document.getElementById('trip-dest').textContent = data.destination || '—';
+        document.getElementById('trip-fare').textContent = data.fare ? 'N' + data.fare : '—';
+      }
+    } catch (err) {}
+  }
+
+  async function submitRating() {
+    if (!selectedRating) {
+      document.getElementById('error-msg').textContent = 'Please select a star rating.';
+      document.getElementById('error-msg').style.display = 'block';
+      return;
+    }
+    const btn = document.getElementById('submit-btn');
+    btn.innerHTML = '<span class="spinner"></span> Submitting...';
+    btn.disabled = true;
+    try {
+      const res = await fetch('http://localhost:5000/ratings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ booking_id: bookingId, score: selectedRating, comment: document.getElementById('comment').value.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('success-msg').textContent = 'Rating submitted. Thank you.';
+        document.getElementById('success-msg').style.display = 'block';
+        document.getElementById('rating-form').style.opacity = '0.5';
+        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+      } else {
+        document.getElementById('error-msg').textContent = data.message || 'Could not submit. Try again.';
+        document.getElementById('error-msg').style.display = 'block';
+        btn.innerHTML = 'Submit rating'; btn.disabled = false;
+      }
+    } catch (err) {
+      document.getElementById('error-msg').textContent = 'Could not connect to server.';
+      document.getElementById('error-msg').style.display = 'block';
+      btn.innerHTML = 'Submit rating'; btn.disabled = false;
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch('http://localhost:5000/ratings/mine', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = document.getElementById('rating-list');
+        if (data.ratings && data.ratings.length) {
+          list.innerHTML = data.ratings.map(r => `
+            <div class="rating-item">
+              <div class="ri-top">
+                <span class="ri-name">${r.rated_user_name || 'User'}</span>
+                <span class="ri-score">${r.score} / 5</span>
+              </div>
+              ${r.comment ? '<div class="ri-comment">' + r.comment + '</div>' : ''}
+              <div class="ri-date">${r.date || ''}</div>
+            </div>
+          `).join('');
+        }
+      }
+    } catch (err) {}
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniRide — Campus Rideshare</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 8rem 5% 4rem;
+    position: relative; overflow: hidden;
+  }
+  .hero-glow {
+    position: absolute; width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(245,200,66,0.07) 0%, transparent 70%);
+    top: -100px; right: -100px; pointer-events: none;
+  }
+  .hero-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.3);
+    color: var(--accent); padding: 0.4rem 1rem; border-radius: 50px;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; margin-bottom: 1.5rem; width: fit-content;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-size: clamp(3rem, 5.5vw, 5.5rem);
+    font-weight: 800; line-height: 1.0; letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  h1 .line2 { color: var(--muted); }
+  .hero-sub { color: var(--muted); font-size: 1.1rem; max-width: 480px; margin-bottom: 2.5rem; font-weight: 300; }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .hero-btn {
+    padding: 0.9rem 2rem; border-radius: 50px;
+    font-weight: 700; font-size: 0.95rem;
+    font-family: var(--font-head); transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  .hero-btn-primary { background: var(--accent); color: #0a0a0f; }
+  .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,200,66,0.4); }
+  .hero-btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .hero-btn-secondary:hover { border-color: var(--muted); }
+
+  /* Map card */
+  .map-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 24px; padding: 2rem; position: relative; overflow: hidden;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .map-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 30%, rgba(245,200,66,0.06) 0%, transparent 60%);
+  }
+  .rider-tag {
+    position: absolute; top: -12px; right: 24px;
+    background: var(--green); color: #0a0a0f;
+    font-size: 0.72rem; font-weight: 700;
+    padding: 0.3rem 0.8rem; border-radius: 50px;
+    font-family: var(--font-head);
+  }
+  .map-bg {
+    background: var(--surface); border-radius: 16px; height: 200px;
+    position: relative; overflow: hidden; margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+  }
+  .map-bg::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(245,200,66,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,200,66,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .map-route {
+    position: absolute; top: 50%; left: 20%; width: 60%; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform: translateY(-50%) rotate(-8deg); border-radius: 2px;
+  }
+  .map-route::before, .map-route::after {
+    content: ''; position: absolute; width: 12px; height: 12px;
+    border-radius: 50%; top: 50%; transform: translateY(-50%);
+  }
+  .map-route::before { background: var(--accent); left: -6px; box-shadow: 0 0 10px var(--accent); }
+  .map-route::after { background: var(--accent2); right: -6px; box-shadow: 0 0 10px var(--accent2); }
+  .map-ping {
+    position: absolute; width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(245,200,66,0.15); border: 2px solid var(--accent);
+    top: 30%; left: 55%; animation: pingAnim 2s infinite;
+  }
+  @keyframes pingAnim { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.4} }
+  .ride-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+  .stat-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem; text-align: center; }
+  .stat-chip .num { font-family: var(--font-head); font-weight: 800; font-size: 1.3rem; color: var(--accent); display: block; }
+  .stat-chip .lbl { font-size: 0.7rem; color: var(--muted); font-weight: 500; }
+
+  /* Sections */
+  section { padding: 6rem 5%; }
+  .section-title { font-family: var(--font-head); font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.8rem; }
+  .section-sub { color: var(--muted); font-size: 1rem; font-weight: 300; max-width: 500px; }
+
+  /* How it works */
+  .how { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .how-header { text-align: center; margin-bottom: 3.5rem; }
+  .how-header .section-sub { margin: 0 auto; }
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 2rem; }
+  .step { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; transition: border-color 0.3s; }
+  .step:hover { border-color: rgba(245,200,66,0.35); }
+  .step-num { font-family: var(--font-head); font-size: 0.72rem; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 1rem; }
+  .step-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem; }
+  .step h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .step p { color: var(--muted); font-size: 0.88rem; font-weight: 300; }
+
+  /* Roles */
+  .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 3rem; }
+  .role-card { border-radius: 24px; padding: 2.5rem; border: 1px solid var(--border); transition: transform 0.3s; }
+  .role-card:hover { transform: translateY(-4px); }
+  .role-card.rider { background: linear-gradient(135deg, rgba(245,200,66,0.1), rgba(245,200,66,0.02)); }
+  .role-card.passenger { background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.02)); }
+  .role-card h3 { font-family: var(--font-head); font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .role-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; font-weight: 300; }
+  .perks { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .perks li { display: flex; align-items: center; gap: 0.6rem; font-size: 0.88rem; }
+  .perks li::before { content: 'v'; font-weight: 800; font-size: 0.75rem; font-family: var(--font-head); }
+  .role-card.rider .perks li::before { color: var(--accent); content: '✓'; }
+  .role-card.passenger .perks li::before { color: var(--accent2); content: '✓'; }
+
+  /* CTA */
+  .cta-section {
+    background: var(--surface); border-top: 1px solid var(--border);
+    text-align: center; padding: 5rem 5%;
+  }
+  .cta-section h2 { font-family: var(--font-head); font-size: clamp(2rem, 3vw, 2.8rem); font-weight: 800; margin-bottom: 1rem; }
+  .cta-section p { color: var(--muted); margin-bottom: 2rem; font-weight: 300; }
+  .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .cta-btn {
+    padding: 0.9rem 2.2rem; border-radius: 50px;
+    font-weight: 700; font-size: 0.95rem; font-family: var(--font-head);
+    transition: all 0.2s;
+  }
+  .cta-btn-p { background: var(--accent); color: #0a0a0f; }
+  .cta-btn-p:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,200,66,0.35); }
+  .cta-btn-s { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .cta-btn-s:hover { border-color: var(--muted); }
+
+  footer {
+    padding: 2rem 5%; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  }
+  footer p { color: var(--muted); font-size: 0.8rem; }
+
+  @media(max-width:900px) {
+    .hero-grid, .steps, .roles-grid { grid-template-columns: 1fr; }
+    .map-card { order: -1; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Uni<span>Ride</span></div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#roles">For students</a>
+    <a href="login.html" class="nav-cta">Sign in</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-grid">
+    <div class="fade-in">
+      <div class="hero-badge"><span class="pulse-dot"></span> Now open to all FAUM students</div>
+      <h1>Campus rides,<br><em>sorted.</em><br><span class="line2">No stress.</span></h1>
+      <p class="hero-sub">UniRide connects FAUM students who drive with students who need a lift — safe, affordable, and verified.</p>
+      <div class="hero-actions">
+        <a href="register.html" class="hero-btn hero-btn-primary">Get started</a>
+        <a href="#how" class="hero-btn hero-btn-secondary">See how it works</a>
+      </div>
+    </div>
+    <div class="map-card">
+      <div class="rider-tag">3 rides available</div>
+      <div class="map-bg">
+        <div class="map-route"></div>
+        <div class="map-ping"></div>
+      </div>
+      <div class="ride-stats">
+        <div class="stat-chip"><span class="num">48</span><span class="lbl">Active Riders</span></div>
+        <div class="stat-chip"><span class="num">120+</span><span class="lbl">Rides Done</span></div>
+        <div class="stat-chip"><span class="num">4.9</span><span class="lbl">Avg Rating</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="how-header">
+    <div class="section-label">How it works</div>
+    <div class="section-title">Three steps to your ride</div>
+    <p class="section-sub">Whether you have a car or need one — the process is the same.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon" style="background:rgba(245,200,66,0.1)">ID</div>
+      <h3>Sign up and verify</h3>
+      <p>Register with your school email and student ID. Your account goes live once we confirm you are a FAUM student.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon" style="background:rgba(255,107,53,0.1)">--</div>
+      <h3>Post or find a ride</h3>
+      <p>Riders post their route and available seats. Passengers describe their trip and get matched to the nearest driver.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon" style="background:rgba(45,219,129,0.1)">**</div>
+      <h3>Ride and rate</h3>
+      <p>Meet at the pick-up point, pay the agreed fare, and leave a rating to keep the platform trustworthy.</p>
+    </div>
+  </div>
+</section>
+
+<section id="roles">
+  <div class="section-label">Two ways to join</div>
+  <div class="section-title">Pick your role</div>
+  <div class="roles-grid">
+    <div class="role-card rider">
+      <h3>Rider — I can drive</h3>
+      <p>You have a car and spare seats. Turn your daily commute into income while helping fellow students.</p>
+      <ul class="perks">
+        <li>Earn on trips you are already making</li>
+        <li>Set your own route, time and fare</li>
+        <li>Student-verified passengers only</li>
+        <li>Full control over who you pick up</li>
+      </ul>
+    </div>
+    <div class="role-card passenger">
+      <h3>Passenger — I need a ride</h3>
+      <p>Find a trusted student driver in minutes. No strangers, no haggling, no uncertainty.</p>
+      <ul class="perks">
+        <li>Fixed fares — no surge pricing</li>
+        <li>Verified FAUM students only</li>
+        <li>Book in advance or ride today</li>
+        <li>Rate your driver after every trip</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <div class="section-label">Get started</div>
+  <h2>Join the FAUM ride network</h2>
+  <p>Free to join. Verified students only. Your campus, your community.</p>
+  <div class="cta-btns">
+    <a href="register.html" class="cta-btn cta-btn-p">Create an account</a>
+    <a href="login.html" class="cta-btn cta-btn-s">Sign in</a>
+  </div>
+</div>
+
+<footer>
+  <div class="logo">Uni<span>Ride</span></div>
+  <p>Father Adasu University Makurdi — CMP 431 Group 18</p>
+  <p>Built by students, for students</p>
+</footer>
+
+</body>
+</html>

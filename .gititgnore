@@ -1,0 +1,4 @@
+.env
+bakend/.env
+__pycache__/
+*.pyc

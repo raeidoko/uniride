@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniRide — Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding-top: 70px; }
+  .dashboard { max-width: 1000px; margin: 0 auto; padding: 2.5rem 5%; }
+  .welcome-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem; }
+  .welcome-bar h1 { font-family: var(--font-head); font-size: 1.8rem; font-weight: 800; }
+  .welcome-bar h1 span { color: var(--accent); }
+  .welcome-bar p { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+  .online-toggle { display: flex; align-items: center; gap: 0.8rem; background: var(--card); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1.1rem; cursor: pointer; transition: border-color 0.2s; }
+  .online-toggle:hover { border-color: var(--accent); }
+  .toggle-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); font-family: var(--font-head); }
+  .toggle-switch { width: 36px; height: 20px; border-radius: 10px; background: var(--border); position: relative; transition: background 0.3s; }
+  .toggle-switch.on { background: var(--green); }
+  .toggle-knob { width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: left 0.3s; }
+  .toggle-switch.on .toggle-knob { left: 19px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.3rem 1.5rem; }
+  .stat-card .s-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+  .stat-card .s-value { font-family: var(--font-head); font-size: 1.8rem; font-weight: 800; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; }
+  .panel-title { font-family: var(--font-head); font-weight: 700; font-size: 1rem; margin-bottom: 1.2rem; }
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  .action-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; text-align: center; cursor: pointer; transition: all 0.2s; text-decoration: none; display: block; }
+  .action-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .action-btn .a-label { font-size: 0.82rem; font-weight: 600; font-family: var(--font-head); }
+  .action-btn .a-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  .verify-banner { background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.25); border-radius: 14px; padding: 1.1rem 1.3rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+  .verify-banner p { font-size: 0.85rem; }
+  .verify-banner p span { color: var(--muted); font-size: 0.8rem; display: block; margin-top: 0.2rem; }
+  .verify-btn { background: var(--accent); color: #0a0a0f; padding: 0.5rem 1.2rem; border-radius: 50px; font-weight: 700; font-size: 0.82rem; font-family: var(--font-head); white-space: nowrap; text-decoration: none; }
+  .action-main { background: linear-gradient(135deg, rgba(245,200,66,0.12), rgba(245,200,66,0.03)); border: 1px solid rgba(245,200,66,0.25); border-radius: 20px; padding: 1.8rem; margin-bottom: 1.5rem; }
+  .action-main h3 { font-family: var(--font-head); font-size: 1.2rem; font-weight: 800; margin-bottom: 0.3rem; }
+  .action-main p { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.2rem; font-weight: 300; }
+  .empty-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+  @media(max-width:700px) { .stats-row { grid-template-columns: 1fr 1fr; } .dash-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Uni<span>Ride</span></a>
+  <div class="nav-links">
+    <span id="nav-name" style="color:var(--muted); font-size:0.85rem;"></span>
+    <a href="#" onclick="logout()" style="color:var(--muted); font-size:0.85rem;">Sign out</a>
+  </div>
+</nav>
+<div class="dashboard fade-in">
+  <div class="verify-banner" id="verify-banner" style="display:none;">
+    <p>Your ID has not been verified yet.<span>Verify your school ID to unlock all features.</span></p>
+    <a href="verify-id.html" class="verify-btn">Verify now</a>
+  </div>
+  <div class="welcome-bar">
+    <div>
+      <h1>Hello, <span id="user-name">—</span></h1>
+      <p id="user-role-label">Loading your account...</p>
+    </div>
+    <div class="online-toggle" id="online-toggle" style="display:none;" onclick="toggleOnline()">
+      <span class="toggle-label" id="toggle-label">Offline</span>
+      <div class="toggle-switch" id="toggle-switch"><div class="toggle-knob"></div></div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="s-label">Total trips</div><div class="s-value" id="stat-trips">0</div></div>
+    <div class="stat-card"><div class="s-label" id="earn-label">Spent</div><div class="s-value" id="stat-earn">N0</div></div>
+    <div class="stat-card"><div class="s-label">Rating</div><div class="s-value" id="stat-rating">—</div></div>
+    <div class="stat-card"><div class="s-label">Status</div><div class="s-value" id="stat-status" style="font-size:1rem; padding-top:0.4rem;">—</div></div>
+  </div>
+  <div id="rider-dash" style="display:none;">
+    <div class="dash-grid">
+      <div class="panel">
+        <div class="panel-title">Quick actions</div>
+        <div class="action-grid">
+          <a href="verify-id.html" class="action-btn"><div class="a-label">Verify ID</div><div class="a-sub">Upload school ID</div></a>
+          <a href="ratings.html" class="action-btn"><div class="a-label">My ratings</div><div class="a-sub">See reviews</div></a>
+        </div>
+      </div>
+      <div class="panel"><div class="panel-title">Recent trips</div><div class="empty-state">Go online to start receiving ride requests.</div></div>
+    </div>
+  </div>
+  <div id="passenger-dash" style="display:none;">
+    <div class="action-main">
+      <h3>Where are you headed?</h3>
+      <p>Describe your trip and we will find the nearest available driver for you.</p>
+      <a href="book-ride.html" class="btn btn-primary" style="width:auto; display:inline-flex;">Find a ride</a>
+    </div>
+    <div class="dash-grid">
+      <div class="panel"><div class="panel-title">Recent trips</div><div class="empty-state">No trips yet. Book your first ride to get started.</div></div>
+      <div class="panel">
+        <div class="panel-title">Quick actions</div>
+        <div class="action-grid">
+          <a href="book-ride.html" class="action-btn"><div class="a-label">Book a ride</div><div class="a-sub">Find a driver</div></a>
+          <a href="verify-id.html" class="action-btn"><div class="a-label">Verify ID</div><div class="a-sub">Upload school ID</div></a>
+          <a href="ratings.html" class="action-btn"><div class="a-label">My ratings</div><div class="a-sub">Reviews given</div></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) { window.location.href = 'login.html'; }
+
+  document.getElementById('user-name').textContent = user.first_name || 'Student';
+  document.getElementById('nav-name').textContent = user.first_name || '';
+  document.getElementById('user-role-label').textContent = user.role === 'rider' ? 'Rider account — ' + (user.department || 'FAUM') : 'Passenger account — ' + (user.department || 'FAUM');
+  document.getElementById('stat-status').innerHTML = user.verified ? '<span class="badge badge-green">Verified</span>' : '<span class="badge badge-yellow">Pending</span>';
+
+  if (!user.verified) document.getElementById('verify-banner').style.display = 'flex';
+
+  if (user.role === 'rider') {
+    document.getElementById('rider-dash').style.display = 'block';
+    document.getElementById('online-toggle').style.display = 'flex';
+    document.getElementById('earn-label').textContent = 'Earned';
+  } else {
+    document.getElementById('passenger-dash').style.display = 'block';
+  }
+
+  let isOnline = false;
+  let riderDocId = null;
+
+  async function loadRiderDoc() {
+    if (user.role !== 'rider') return;
+    const q = query(collection(db, 'riders'), where('user_id', '==', user.id));
+    const snap = await getDocs(q);
+    if (!snap.empty) riderDocId = snap.docs[0].id;
+  }
+  loadRiderDoc();
+
+  async function toggleOnline() {
+    isOnline = !isOnline;
+    document.getElementById('toggle-switch').classList.toggle('on', isOnline);
+    document.getElementById('toggle-label').textContent = isOnline ? 'Online' : 'Offline';
+    if (riderDocId) {
+      const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+      await updateDoc(doc(db, 'riders', riderDocId), { is_online: isOnline });
+    }
+  }
+  window.toggleOnline = toggleOnline;
+
+  async function logout() {
+    await signOut(auth);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = 'login.html';
+  }
+  window.logout = logout;
+</script>
+</body>
+</html>
