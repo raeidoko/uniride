@@ -153,7 +153,7 @@
     if (el) el.remove();
   }
 
-  async function sendMessage() {
+ async function sendMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
@@ -162,14 +162,48 @@
     input.value = ''; input.style.height = 'auto';
     addMessage(text, 'user');
     showTyping();
+
     try {
+      // Fetch online riders from Firebase first
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+      const { getFirestore, collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+      const { getAuth } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+
+      const fbApp = initializeApp(firebaseConfig, 'book-ride');
+      const db = getFirestore(fbApp);
+
+      const q = query(collection(db, 'riders'), where('is_online', '==', true));
+      const snap = await getDocs(q);
+
+      const riders = [];
+      for (const docSnap of snap.docs) {
+        const rider = docSnap.data();
+        // Get rider's user details
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        const userDoc = await getDoc(doc(db, 'users', rider.user_id));
+        if (userDoc.exists()) {
+          const u = userDoc.data();
+          riders.push({
+            name: u.first_name + ' ' + u.last_name,
+            phone: u.phone,
+            department: u.department,
+            vehicle_type: rider.vehicle_type,
+            seats: rider.seats,
+            rate: rider.rate,
+            rating: null
+          });
+        }
+      }
+
       const res = await fetch('https://uniride-2.onrender.com/match-ride', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-        body: JSON.stringify({ message: text, latitude: userLat, longitude: userLng })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, latitude: userLat, longitude: userLng, riders: riders })
       });
+
       const data = await res.json();
       removeTyping();
+
       if (res.ok) {
         const t = data.trip || {};
         const reply = 'Got it. Looking for drivers going to <strong>' + (t.destination || 'your destination') + '</strong>' +
@@ -183,6 +217,7 @@
     } catch (err) {
       removeTyping();
       addMessage('Could not connect to server. Make sure the backend is running.', 'bot');
+      console.error(err);
     }
     btn.disabled = false;
   }
