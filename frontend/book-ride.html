@@ -97,10 +97,18 @@
     <div id="driver-list"></div>
   </div>
 </div>
-<script>
+
+<script src="config.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const fbApp = initializeApp(firebaseConfig, 'book-ride-app');
+  const db = getFirestore(fbApp);
+
   let userLat = null, userLng = null;
 
-  function getLocation() {
+  window.getLocation = function() {
     const btn = document.querySelector('.gps-btn');
     btn.textContent = 'Detecting...';
     if (navigator.geolocation) {
@@ -120,12 +128,12 @@
     }
   }
 
-  function autoResize(el) {
+  window.autoResize = function(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 100) + 'px';
   }
 
-  function handleKey(e) {
+  window.handleKey = function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
@@ -153,33 +161,13 @@
     if (el) el.remove();
   }
 
- async function sendMessage() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    if (!text) return;
-    const btn = document.getElementById('send-btn');
-    btn.disabled = true;
-    input.value = ''; input.style.height = 'auto';
-    addMessage(text, 'user');
-    showTyping();
-
+  async function getOnlineRiders() {
+    const riders = [];
     try {
-      // Fetch online riders from Firebase first
-      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-      const { getFirestore, collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-      const { getAuth } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
-
-      const fbApp = initializeApp(firebaseConfig, 'book-ride');
-      const db = getFirestore(fbApp);
-
       const q = query(collection(db, 'riders'), where('is_online', '==', true));
       const snap = await getDocs(q);
-
-      const riders = [];
       for (const docSnap of snap.docs) {
         const rider = docSnap.data();
-        // Get rider's user details
-        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
         const userDoc = await getDoc(doc(db, 'users', rider.user_id));
         if (userDoc.exists()) {
           const u = userDoc.data();
@@ -194,7 +182,24 @@
           });
         }
       }
+    } catch (err) {
+      console.error('Error fetching riders:', err);
+    }
+    return riders;
+  }
 
+  window.sendMessage = async function() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    input.value = ''; input.style.height = 'auto';
+    addMessage(text, 'user');
+    showTyping();
+
+    try {
+      const riders = await getOnlineRiders();
       const res = await fetch('https://uniride-2.onrender.com/match-ride', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -216,7 +221,7 @@
       }
     } catch (err) {
       removeTyping();
-      addMessage('Could not connect to server. Make sure the backend is running.', 'bot');
+      addMessage('Could not connect to server. Please try again.', 'bot');
       console.error(err);
     }
     btn.disabled = false;
@@ -246,7 +251,7 @@
         <div class="driver-details">
           <div class="d-detail"><div class="d-val">N${d.rate || '—'}</div><div class="d-lbl">Base fare</div></div>
           <div class="d-detail"><div class="d-val">${d.seats || '—'}</div><div class="d-lbl">Seats free</div></div>
-          <div class="d-detail"><div class="d-val">${d.distance ? d.distance + 'km' : 'Nearby'}</div><div class="d-lbl">Distance</div></div>
+          <div class="d-detail"><div class="d-val">Nearby</div><div class="d-lbl">Distance</div></div>
         </div>
         <div class="driver-actions">
           <a href="tel:${d.phone || ''}" class="d-btn d-btn-call">Call driver</a>
