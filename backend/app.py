@@ -3,13 +3,15 @@ from flask_cors import CORS
 import requests as req
 import json
 import re
+import os
+import base64
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
 CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
 
 
@@ -24,48 +26,10 @@ def verify_id():
         if 'image' not in request.files:
             return jsonify({'message': 'No image uploaded.'}), 400
 
-        import pytesseract
-        from PIL import Image
-
-        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
         file = request.files['image']
-        img = Image.open(file)
-        text = pytesseract.image_to_string(img)
-        print("OCR text extracted:", text[:100])
-
-        name = None
-        matric_no = None
-        department = None
-
-        for line in text.split('\n'):
-            line = line.strip()
-            if re.search(r'[A-Z]{2,}/[A-Z]{2,}/\d{4}/\d+', line):
-                matric_no = line
-            if 'department' in line.lower() or 'dept' in line.lower():
-                department = line
-            if len(line.split()) >= 2 and line.isupper() and not any(c.isdigit() for c in line):
-                name = line.title()
-
-        return jsonify({
-            'name': name,
-            'matric_no': matric_no,
-            'department': department,
-            'raw_text': text
-        }), 200
-
-    except Exception as e:
-        print("ERROR in /verify-id:", str(e))
-        return jsonify({'message': str(e)}), 500
-
-
-@app.route('/match-ride', methods=['POST'])
-def match_ride():
-    try:
-        data = request.get_json()
-        message = data.get('message', '')
-        riders = data.get('riders', [])
-        print("Match ride request:", message)
+        image_data = file.read()
+        image_b64 = base64.b64encode(image_data).decode('utf-8')
+        media_type = file.content_type or 'image/jpeg'
 
         api_response = req.post(
             'https://api.anthropic.com/v1/messages',
@@ -79,10 +43,67 @@ def match_ride():
                 'max_tokens': 300,
                 'messages': [{
                     'role': 'user',
-                    'content': f'''Extract destination, time, and budget from this ride request.
-Return only JSON with keys: destination, time, budget.
-If any field is not mentioned return null.
-Message: "{message}"'''
+                    'content': [
+                        {
+                            'type': 'image',
+                            'source': {
+                                'type': 'base64',
+                                'media_type': media_type,
+                                'data': image_b64
+                            }
+                        },
+                        {
+                            'type': 'text',
+                            'text': 'This is a student ID card. Extract the full name, matric number, and department. Return only JSON with keys: name, matric_no, department. If you cannot find a field return null.'
+                        }
+                    ]
+                }]
+            }
+        )
+
+        result = {'name': None, 'matric_no': None, 'department': None}
+        try:
+            raw = api_response.json()['content'][0]['text']
+            raw = raw.replace('```json', '').replace('```', '').strip()
+            result = json.loads(raw)
+            print("ID scan result:", result)
+        except Exception as parse_err:
+            print("Could not parse ID response:", parse_err)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print("ERROR in /verify-id:", str(e))
+        return jsonify({'message': str(e)}), 500
+
+
+@app.route('/verify-id/confirm', methods=['POST'])
+def confirm_verification():
+    return jsonify({'message': 'Verified successfully.'}), 200
+
+
+@app.route('/match-ride', methods=['POST'])
+def match_ride():
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        riders = data.get('riders', [])
+        print("Match ride request:", message)
+        print("Online riders received:", len(riders))
+
+        api_response = req.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'x-api-key': CLAUDE_API_KEY,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            },
+            json={
+                'model': 'claude-haiku-4-5-20251001',
+                'max_tokens': 300,
+                'messages': [{
+                    'role': 'user',
+                    'content': 'Extract destination, time, and budget from this ride request. Return only JSON with keys: destination, time, budget. If any field is not mentioned return null. Message: "' + message + '"'
                 }]
             }
         )
